@@ -22,6 +22,9 @@ ggplot(data = bike)+
 ggplot(data = bike)+
   geom_point(aes(x= temp, y = cnt))
 
+library(here)
+?here
+here::here("data/daily_bike_data.csv")
 
 ### Data Cleaning ----
 # dplyr verbs for data transformations
@@ -101,10 +104,92 @@ bike %>%
   select(season) %>%
   distinct
 
-# slecting multiple options at once
+# selecting multiple options at once
 bike %>%
 filter(season== "summer" | season == "winter")
 
 seasons <- c("summer", "winter")
 bike %>%
   filter(season %in% seasons)
+
+
+### More dyplyr verbs
+# summarize: summary multiple rows for a col/variable
+# group_by: perform and operation separately for each group
+
+bike2 %>% 
+  filter (season == "summer") %>%
+  summarize(
+  temp_mean = mean(temp),
+  cnt_mean = mean (cnt),
+  cnt_sum = sum(cnt))
+
+bike2 %>%
+  group_by(season) %>%
+  summarize(
+    temp_mean = mean(temp),
+    cnt_mean = mean (cnt),
+    cnt_sum = sum(cnt))
+
+# What are the season definitions?
+sort(names(bike))
+bike %>% select (season, mnth) %>% distinct()
+
+# Create a new season 
+bike3 <- bike2 %>%
+  mutate(
+    season2 = 1* (mnth %in% c("December", "January", "February"))+
+      2 * (mnth %in% c("March", "Apr", "May")) +
+      3 * (mnth %in% c("June", "July", "August")) +
+      4 * (mnth %in% c("September", "October", "November"))) %>%
+  mutate(season2 = factor(season2, levels = 0:4, 
+                          labels = c("Unknown", "Winter", "Spring", "Summer", "Fall")))
+
+bike3 %>%
+  group_by(season2) %>%
+  summarize(
+    temp_mean = mean(temp),
+    cnt_mean = mean (cnt),
+    cnt_sum = sum(cnt))
+
+
+## Facetting in ggplot
+ggplot(data = bike3) +
+  geom_point(aes(x=temp, y=cnt))+
+  geom_smooth(aes(x=temp, y=cnt), method = "lm") +
+  facet_wrap(~season2)
+
+ggplot(data = bike3) +
+  geom_point(aes(x=temp, y=cnt))+
+  geom_smooth(aes(x=temp, y=cnt), 
+              method = "lm", 
+              formula = y ~ poly(x, 2)) +
+  facet_wrap(~season2)
+
+### Pivoting wider to long and longer to wide
+# Long to wide: data in multiple columns ( e.g. temp1, temp2, temp3, ..)
+# Wide to long: data in one column, classifier in other columns
+# tidyr is the package that allows transformations
+
+months <- c("January", "February", "March", "April",
+            "May", "June", "July", "August",
+            "September", "October", "November", "December")
+
+
+tidybike <- bike3 %>% # long format data
+  select (yr, mnth, temp, cnt) %>%
+  mutate(month = factor(mnth, 
+                        levels= months, 
+                        labels = months)) %>%
+  group_by(yr, month) %>%
+  summarize(temp_mean = mean(temp), rides = sum(cnt))
+
+# Tidyr functions for long to wide
+# spread
+# pivot_wider (new sintax)
+
+tidybike %>% 
+  select(-rides) %>%
+  pivot_wider(values_from=temp_mean, 
+                         names_from=month, 
+                         names_prefix = "temp_")
