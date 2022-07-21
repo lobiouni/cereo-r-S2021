@@ -184,12 +184,32 @@ tidybike <- bike3 %>% # long format data
   group_by(yr, month) %>%
   summarize(temp_mean = mean(temp), rides = sum(cnt))
 
-# Tidyr functions for long to wide
-# spread
+
+# Going from long to wide
 # pivot_wider (new sintax)
 
 tidybike %>% 
   select(-rides) %>%
   pivot_wider(values_from=temp_mean, 
-                         names_from=month, 
-                         names_prefix = "temp_")
+              names_from=month, 
+              names_prefix = "temp_")
+
+rides <- tidybike %>% 
+  select(-temp_mean) %>%
+  pivot_wider(values_from=rides, 
+              names_from=month, 
+              names_prefix = "rides_") %>%
+  rename_with(tolower) %>%
+  rename(year = yr)
+
+# Going from wide to long
+# pivot_longer / gather
+rides %>% gather(key = "month", value = "rides", -year)
+
+rides %>% 
+  select (year, rides_january, rides_february) %>%
+  pivot_longer(names_to = "month", cols = c("rides_january", "rides_february")) %>%
+  mutate(month = substr(month, 7, nchar(month))) %>%
+  mutate(month = toupper(month))
+
+
